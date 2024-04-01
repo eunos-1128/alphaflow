@@ -2,6 +2,7 @@ import logging, socket, os
 
 model_dir = os.environ.get("MODEL_DIR", "./workdir/default")
 
+
 class Rank(logging.Filter):
     def filter(self, record):
         record.global_rank = os.environ.get("GLOBAL_RANK", 0)
@@ -33,11 +34,13 @@ def get_logger(name):
     logger.addHandler(fh)
     return logger
 
+
 def init():
     if bool(int(os.environ.get("WANDB_LOGGING", "0"))):
         os.makedirs(model_dir, exist_ok=True)
-        out_file = open(os.path.join(model_dir, "std.out"), 'ab')
+        out_file = open(os.path.join(model_dir, "std.out"), "ab")
         os.dup2(out_file.fileno(), 1)
         os.dup2(out_file.fileno(), 2)
-    
+
+
 init()

@@ -17,10 +17,12 @@ import torch
 import itertools
 
 from openfold.data import data_transforms
+
 NUM_RES = "num residues placeholder"
 NUM_MSA_SEQ = "msa placeholder"
 NUM_EXTRA_SEQ = "extra msa placeholder"
 NUM_TEMPLATES = "num templates placeholder"
+
 
 @data_transforms.curry1
 def random_crop_to_size(
@@ -51,13 +53,15 @@ def random_crop_to_size(
     num_res_crop_size = min(int(seq_length), crop_size)
 
     def _randint(lower, upper):
-        return int(torch.randint(
+        return int(
+            torch.randint(
                 lower,
                 upper + 1,
                 (1,),
                 device=protein["seq_length"].device,
                 generator=g,
-        )[0])
+            )[0]
+        )
 
     if subsample_templates:
         templates_crop_start = _randint(0, num_templates)
@@ -67,12 +71,10 @@ def random_crop_to_size(
     else:
         templates_crop_start = 0
 
-    num_templates_crop_size = min(
-        num_templates - templates_crop_start, max_templates
-    )
+    num_templates_crop_size = min(num_templates - templates_crop_start, max_templates)
 
     n = seq_length - num_res_crop_size
-    if "use_clamped_fape" in protein and protein["use_clamped_fape"] == 1.:
+    if "use_clamped_fape" in protein and protein["use_clamped_fape"] == 1.0:
         right_anchor = n
     else:
         x = _randint(0, n)
@@ -99,12 +101,11 @@ def random_crop_to_size(
                 crop_start = num_res_crop_start if is_num_res else 0
                 crop_size = num_res_crop_size if is_num_res else dim
             slices.append(slice(crop_start, crop_start + crop_size))
-        protein[k] = v[slices] #### MODIFIED 
-    
-    protein["seq_length"] = protein["seq_length"].new_tensor(num_res_crop_size)
-    
-    return protein
+        protein[k] = v[slices]  #### MODIFIED
 
+    protein["seq_length"] = protein["seq_length"].new_tensor(num_res_crop_size)
+
+    return protein
 
 
 @data_transforms.curry1
@@ -114,7 +115,6 @@ def make_fixed_size(
     num_res=0,
     num_templates=0,
 ):
-
     """Guess at the MSA and sequence dimension to make fixed size."""
     pad_size_map = {
         NUM_RES: num_res,
@@ -129,9 +129,7 @@ def make_fixed_size(
         schema = shape_schema[k]
         msg = "Rank mismatch between shape and shape schema for"
         assert len(shape) == len(schema), f"{msg} {k}: {shape} vs {schema}"
-        pad_size = [
-            pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)
-        ]
+        pad_size = [pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)]
 
         padding = [(0, p - v.shape[i]) for i, p in enumerate(pad_size)]
         padding.reverse()
@@ -139,7 +137,7 @@ def make_fixed_size(
         if padding:
             protein[k] = torch.nn.functional.pad(v, padding)
             protein[k] = torch.reshape(protein[k], pad_size)
-    
+
     return protein
 
 
@@ -205,12 +203,12 @@ def nonensembled_transform_fns(common_cfg, mode_cfg):
     max_extra_msa = mode_cfg.max_extra_msa
 
     msa_seed = None
-    if(not common_cfg.resample_msa_in_recycling):
+    if not common_cfg.resample_msa_in_recycling:
         msa_seed = ensemble_seed
-    
+
     transforms.append(
         data_transforms.sample_msa(
-            max_msa_clusters, 
+            max_msa_clusters,
             keep_extra=True,
             seed=msa_seed,
         )
@@ -244,7 +242,7 @@ def nonensembled_transform_fns(common_cfg, mode_cfg):
 
     if mode_cfg.fixed_size:
         transforms.append(data_transforms.select_feat(list(crop_feats)))
-        
+
         transforms.append(
             data_transforms.random_crop_to_size(
                 mode_cfg.crop_size,
@@ -273,13 +271,13 @@ def nonensembled_transform_fns(common_cfg, mode_cfg):
             #     mode_cfg.max_templates,
             # )
         )
-    '''
+    """
     else:
         transforms.append(
             data_transforms.crop_templates(mode_cfg.max_templates)
         )
 
-    '''
+    """
     return transforms
 
 
@@ -287,10 +285,9 @@ def process_tensors_from_config(tensors, common_cfg, mode_cfg):
     """Based on the config, apply filters and transformations to the data."""
 
     no_templates = True
-    if("template_aatype" in tensors):
+    if "template_aatype" in tensors:
         no_templates = tensors["template_aatype"].shape[0] == 0
 
-    
     nonensembled = nonensembled_transform_fns(
         common_cfg,
         mode_cfg,
@@ -299,7 +296,6 @@ def process_tensors_from_config(tensors, common_cfg, mode_cfg):
     tensors = compose(nonensembled)(tensors)
 
     return tensors
-
 
 
 @data_transforms.curry1

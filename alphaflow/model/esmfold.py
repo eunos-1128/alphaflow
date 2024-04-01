@@ -61,7 +61,9 @@ class ESMFold(nn.Module):
 
         self.esm_feats = self.esm.embed_dim
         self.esm_attns = self.esm.num_layers * self.esm.attention_heads
-        self.register_buffer("af2_to_esm", ESMFold._af2_to_esm(self.esm_dict).float()) # hack to get EMA working
+        self.register_buffer(
+            "af2_to_esm", ESMFold._af2_to_esm(self.esm_dict).float()
+        )  # hack to get EMA working
         self.esm_s_combine = nn.Parameter(torch.zeros(self.esm.num_layers + 1))
 
         c_s = cfg.trunk.sequence_state_dim
@@ -75,7 +77,7 @@ class ESMFold(nn.Module):
         )
         ######################
         self.input_pair_embedding = Linear(
-            cfg.input_pair_embedder.no_bins, 
+            cfg.input_pair_embedder.no_bins,
             cfg.trunk.pairwise_state_dim,
             init="final",
         )
@@ -83,7 +85,7 @@ class ESMFold(nn.Module):
             embedding_size=cfg.input_pair_embedder.time_emb_dim
         )
         self.input_time_embedding = Linear(
-            cfg.input_pair_embedder.time_emb_dim, 
+            cfg.input_pair_embedder.time_emb_dim,
             cfg.trunk.pairwise_state_dim,
             init="final",
         )
@@ -94,12 +96,12 @@ class ESMFold(nn.Module):
         self.extra_input = extra_input
         if extra_input:
             self.extra_input_pair_embedding = Linear(
-                cfg.input_pair_embedder.no_bins, 
+                cfg.input_pair_embedder.no_bins,
                 cfg.evoformer_stack.c_z,
                 init="final",
-            )   
+            )
             self.extra_input_pair_stack = InputPairStack(**cfg.input_pair_stack)
-        
+
         #######################
 
         # 0 is padding, N is unknown residues, N + 1 is mask.
@@ -115,11 +117,11 @@ class ESMFold(nn.Module):
         # self.ptm_head = nn.Linear(c_z, self.distogram_bins)
         # self.lm_head = nn.Linear(c_s, self.n_tokens_embed)
         self.lddt_bins = 50
-        
+
         self.lddt_head = PerResidueLDDTCaPredictor(
             no_bins=self.lddt_bins,
             c_in=cfg.trunk.structure_module.c_s,
-            c_hidden=cfg.lddt_head_hid_dim
+            c_hidden=cfg.lddt_head_hid_dim,
         )
 
     @staticmethod
@@ -169,14 +171,14 @@ class ESMFold(nn.Module):
         return new_esmaa
 
     def _get_input_pair_embeddings(self, dists, mask):
-
         mask = mask.unsqueeze(-1) * mask.unsqueeze(-2)
-        
+
         lower = torch.linspace(
             self.cfg.input_pair_embedder.min_bin,
             self.cfg.input_pair_embedder.max_bin,
-            self.cfg.input_pair_embedder.no_bins, 
-        device=dists.device)
+            self.cfg.input_pair_embedder.no_bins,
+            device=dists.device,
+        )
         dists = dists.unsqueeze(-1)
         inf = self.cfg.input_pair_embedder.inf
         upper = torch.cat([lower[1:], lower.new_tensor([inf])], dim=-1)
@@ -187,14 +189,14 @@ class ESMFold(nn.Module):
         return inp_z
 
     def _get_extra_input_pair_embeddings(self, dists, mask):
-
         mask = mask.unsqueeze(-1) * mask.unsqueeze(-2)
-        
+
         lower = torch.linspace(
             self.cfg.input_pair_embedder.min_bin,
             self.cfg.input_pair_embedder.max_bin,
-            self.cfg.input_pair_embedder.no_bins, 
-        device=dists.device)
+            self.cfg.input_pair_embedder.no_bins,
+            device=dists.device,
+        )
         dists = dists.unsqueeze(-1)
         inf = self.cfg.input_pair_embedder.inf
         upper = torch.cat([lower[1:], lower.new_tensor([inf])], dim=-1)
@@ -204,7 +206,6 @@ class ESMFold(nn.Module):
         inp_z = self.extra_input_pair_stack(inp_z, mask, chunk_size=None)
         return inp_z
 
-                                   
     def forward(
         self,
         batch,
@@ -224,12 +225,12 @@ class ESMFold(nn.Module):
             num_recycles (int): How many recycle iterations to perform. If None, defaults to training max
                 recycles, which is 3.
         """
-        aa = batch['aatype']
-        mask = batch['seq_mask']
-        residx = batch['residue_index']
-       
+        aa = batch["aatype"]
+        mask = batch["seq_mask"]
+        residx = batch["residue_index"]
+
         # === ESM ===
-        
+
         esmaa = self._af2_idx_to_esm_idx(aa, mask)
         esm_s, _ = self._compute_language_model_representations(esmaa)
 
@@ -244,72 +245,104 @@ class ESMFold(nn.Module):
         s_s_0 = self.esm_s_mlp(esm_s)
         s_s_0 += self.embedding(aa)
         #######################
-        if 'noised_pseudo_beta_dists' in batch:
+        if "noised_pseudo_beta_dists" in batch:
             inp_z = self._get_input_pair_embeddings(
-                batch['noised_pseudo_beta_dists'], 
-                batch['pseudo_beta_mask']
+                batch["noised_pseudo_beta_dists"], batch["pseudo_beta_mask"]
             )
-            inp_z = inp_z + self.input_time_embedding(self.input_time_projection(batch['t']))[:,None,None]
-        else: # have to run the module, else DDP wont work
-            B, L = batch['aatype'].shape
+            inp_z = (
+                inp_z
+                + self.input_time_embedding(self.input_time_projection(batch["t"]))[
+                    :, None, None
+                ]
+            )
+        else:  # have to run the module, else DDP wont work
+            B, L = batch["aatype"].shape
             inp_z = self._get_input_pair_embeddings(
-                s_s_0.new_zeros(B, L, L), 
-                batch['pseudo_beta_mask'] * 0.0
+                s_s_0.new_zeros(B, L, L), batch["pseudo_beta_mask"] * 0.0
             )
-            inp_z = inp_z + self.input_time_embedding(self.input_time_projection(inp_z.new_zeros(B)))[:,None,None]
+            inp_z = (
+                inp_z
+                + self.input_time_embedding(
+                    self.input_time_projection(inp_z.new_zeros(B))
+                )[:, None, None]
+            )
         ##########################
         #############################
         if self.extra_input:
-            if 'extra_all_atom_positions' in batch:
-                extra_pseudo_beta = pseudo_beta_fn(batch['aatype'], batch['extra_all_atom_positions'], None)
-                extra_pseudo_beta_dists = torch.sum((extra_pseudo_beta.unsqueeze(-2) - extra_pseudo_beta.unsqueeze(-3)) ** 2, dim=-1)**0.5
-                extra_inp_z = self._get_extra_input_pair_embeddings(
-                    extra_pseudo_beta_dists, 
-                    batch['pseudo_beta_mask'],
+            if "extra_all_atom_positions" in batch:
+                extra_pseudo_beta = pseudo_beta_fn(
+                    batch["aatype"], batch["extra_all_atom_positions"], None
                 )
-                
-            else: # otherwise DDP complains
-                B, L = batch['aatype'].shape
+                extra_pseudo_beta_dists = (
+                    torch.sum(
+                        (
+                            extra_pseudo_beta.unsqueeze(-2)
+                            - extra_pseudo_beta.unsqueeze(-3)
+                        )
+                        ** 2,
+                        dim=-1,
+                    )
+                    ** 0.5
+                )
                 extra_inp_z = self._get_extra_input_pair_embeddings(
-                    inp_z.new_zeros(B, L, L), 
-                    inp_z.new_zeros(B, L),
-                ) * 0.0
-    
+                    extra_pseudo_beta_dists,
+                    batch["pseudo_beta_mask"],
+                )
+
+            else:  # otherwise DDP complains
+                B, L = batch["aatype"].shape
+                extra_inp_z = (
+                    self._get_extra_input_pair_embeddings(
+                        inp_z.new_zeros(B, L, L),
+                        inp_z.new_zeros(B, L),
+                    )
+                    * 0.0
+                )
+
             inp_z = inp_z + extra_inp_z
         ########################
 
-
-        
-        s_z_0 = inp_z 
+        s_z_0 = inp_z
         if prev_outputs is not None:
-            s_s_0 = s_s_0 + self.trunk.recycle_s_norm(prev_outputs['s_s'])
-            s_z_0 = s_z_0 + self.trunk.recycle_z_norm(prev_outputs['s_z'])
-            s_z_0 = s_z_0 + self.trunk.recycle_disto(FoldingTrunk.distogram(
-                prev_outputs['sm']["positions"][-1][:, :, :3],
-                3.375,
-                21.375,
-                self.trunk.recycle_bins,
-            ))
+            s_s_0 = s_s_0 + self.trunk.recycle_s_norm(prev_outputs["s_s"])
+            s_z_0 = s_z_0 + self.trunk.recycle_z_norm(prev_outputs["s_z"])
+            s_z_0 = s_z_0 + self.trunk.recycle_disto(
+                FoldingTrunk.distogram(
+                    prev_outputs["sm"]["positions"][-1][:, :, :3],
+                    3.375,
+                    21.375,
+                    self.trunk.recycle_bins,
+                )
+            )
 
         else:
             s_s_0 = s_s_0 + self.trunk.recycle_s_norm(torch.zeros_like(s_s_0)) * 0.0
             s_z_0 = s_z_0 + self.trunk.recycle_z_norm(torch.zeros_like(s_z_0)) * 0.0
-            s_z_0 = s_z_0 + self.trunk.recycle_disto(s_z_0.new_zeros(s_z_0.shape[:-2], dtype=torch.long)) * 0.0
+            s_z_0 = (
+                s_z_0
+                + self.trunk.recycle_disto(
+                    s_z_0.new_zeros(s_z_0.shape[:-2], dtype=torch.long)
+                )
+                * 0.0
+            )
 
-
-            
         structure: dict = self.trunk(
-            s_s_0, s_z_0, aa, residx, mask, no_recycles=0 # num_recycles
+            s_s_0,
+            s_z_0,
+            aa,
+            residx,
+            mask,
+            no_recycles=0,  # num_recycles
         )
         disto_logits = self.distogram_head(structure["s_z"])
         disto_logits = (disto_logits + disto_logits.transpose(1, 2)) / 2
         structure["distogram_logits"] = disto_logits
 
-        '''
+        """
         lm_logits = self.lm_head(structure["s_s"])
         structure["lm_logits"] = lm_logits
-        '''
-        
+        """
+
         structure["aatype"] = aa
         make_atom14_masks(structure)
 
@@ -319,13 +352,13 @@ class ESMFold(nn.Module):
         ]:
             structure[k] *= mask.unsqueeze(-1)
         structure["residue_index"] = residx
-        lddt_head = self.lddt_head(structure['sm']["single"])
+        lddt_head = self.lddt_head(structure["sm"]["single"])
         structure["lddt_logits"] = lddt_head
         plddt = categorical_lddt(lddt_head, bins=self.lddt_bins)
         structure["plddt"] = 100 * plddt
         # we predict plDDT between 0 and 1, scale to be between 0 and 100.
 
-        '''
+        """
         ptm_logits = self.ptm_head(structure["s_z"])
         seqlen = mask.type(torch.int64).sum(1)
         structure["tm_logits"] = ptm_logits
@@ -344,11 +377,14 @@ class ESMFold(nn.Module):
                 ptm_logits, max_bin=31, no_bins=self.distogram_bins
             )
         )
-        '''
+        """
 
-        structure["final_atom_positions"] = atom14_to_atom37(structure["sm"]["positions"][-1], batch)
+        structure["final_atom_positions"] = atom14_to_atom37(
+            structure["sm"]["positions"][-1], batch
+        )
         structure["final_affine_tensor"] = structure["sm"]["frames"][-1]
-        if "name" in batch: structure["name"] = batch["name"]
+        if "name" in batch:
+            structure["name"] = batch["name"]
         return structure
 
     @torch.no_grad()
@@ -392,7 +428,7 @@ class ESMFold(nn.Module):
         aatype, mask, residx, linker_mask = map(
             lambda x: x.to(self.device), (aatype, mask, residx, linker_mask)
         )
-        
+
         output = self.forward(
             aatype,
             mask=mask,
@@ -405,7 +441,9 @@ class ESMFold(nn.Module):
             "atom37_atom_exists"
         ] * linker_mask.unsqueeze(2)
 
-        output["mean_plddt"] = (output["plddt"] * output["atom37_atom_exists"]).sum(dim=(1, 2)) / output["atom37_atom_exists"].sum(dim=(1, 2))
+        output["mean_plddt"] = (output["plddt"] * output["atom37_atom_exists"]).sum(
+            dim=(1, 2)
+        ) / output["atom37_atom_exists"].sum(dim=(1, 2))
         output["chain_index"] = chain_index
 
         return output

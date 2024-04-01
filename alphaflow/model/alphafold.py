@@ -24,7 +24,7 @@ from openfold.model.embedders import (
 from openfold.model.evoformer import EvoformerStack, ExtraMSAStack
 from openfold.model.heads import AuxiliaryHeads
 from openfold.model.structure_module import StructureModule
-    
+
 import openfold.np.residue_constants as residue_constants
 from openfold.utils.feats import (
     pseudo_beta_fn,
@@ -64,16 +64,15 @@ class AlphaFold(nn.Module):
         self.recycling_embedder = RecyclingEmbedder(
             **self.config["recycling_embedder"],
         )
-        
 
-        if(self.extra_msa_config.enabled):
+        if self.extra_msa_config.enabled:
             self.extra_msa_embedder = ExtraMSAEmbedder(
                 **self.extra_msa_config["extra_msa_embedder"],
             )
             self.extra_msa_stack = ExtraMSAStack(
                 **self.extra_msa_config["extra_msa_stack"],
             )
-        
+
         self.evoformer = EvoformerStack(
             **self.config["evoformer_stack"],
         )
@@ -86,7 +85,7 @@ class AlphaFold(nn.Module):
 
         ################
         self.input_pair_embedding = Linear(
-            self.config.input_pair_embedder.no_bins, 
+            self.config.input_pair_embedder.no_bins,
             self.config.evoformer_stack.c_z,
             init="final",
         )
@@ -94,7 +93,7 @@ class AlphaFold(nn.Module):
             embedding_size=self.config.input_pair_embedder.time_emb_dim
         )
         self.input_time_embedding = Linear(
-            self.config.input_pair_embedder.time_emb_dim, 
+            self.config.input_pair_embedder.time_emb_dim,
             self.config.evoformer_stack.c_z,
             init="final",
         )
@@ -102,23 +101,23 @@ class AlphaFold(nn.Module):
         self.extra_input = extra_input
         if extra_input:
             self.extra_input_pair_embedding = Linear(
-                self.config.input_pair_embedder.no_bins, 
+                self.config.input_pair_embedder.no_bins,
                 self.config.evoformer_stack.c_z,
                 init="final",
-            )   
+            )
             self.extra_input_pair_stack = InputPairStack(**self.config.input_pair_stack)
-        
+
         ################
 
     def _get_input_pair_embeddings(self, dists, mask):
-
         mask = mask.unsqueeze(-1) * mask.unsqueeze(-2)
-        
+
         lower = torch.linspace(
             self.config.input_pair_embedder.min_bin,
             self.config.input_pair_embedder.max_bin,
-            self.config.input_pair_embedder.no_bins, 
-        device=dists.device)
+            self.config.input_pair_embedder.no_bins,
+            device=dists.device,
+        )
         dists = dists.unsqueeze(-1)
         inf = self.config.input_pair_embedder.inf
         upper = torch.cat([lower[1:], lower.new_tensor([inf])], dim=-1)
@@ -129,14 +128,14 @@ class AlphaFold(nn.Module):
         return inp_z
 
     def _get_extra_input_pair_embeddings(self, dists, mask):
-
         mask = mask.unsqueeze(-1) * mask.unsqueeze(-2)
-        
+
         lower = torch.linspace(
             self.config.input_pair_embedder.min_bin,
             self.config.input_pair_embedder.max_bin,
-            self.config.input_pair_embedder.no_bins, 
-        device=dists.device)
+            self.config.input_pair_embedder.no_bins,
+            device=dists.device,
+        )
         dists = dists.unsqueeze(-1)
         inf = self.config.input_pair_embedder.inf
         upper = torch.cat([lower[1:], lower.new_tensor([inf])], dim=-1)
@@ -146,9 +145,7 @@ class AlphaFold(nn.Module):
         inp_z = self.extra_input_pair_stack(inp_z, mask, chunk_size=None)
         return inp_z
 
-    
     def forward(self, batch, prev_outputs=None):
-
         feats = batch
 
         # Primary output dictionary
@@ -166,7 +163,7 @@ class AlphaFold(nn.Module):
         n = feats["target_feat"].shape[-2]
         n_seq = feats["msa_feat"].shape[-3]
         device = feats["target_feat"].device
-        
+
         # Controls whether the model uses in-place operations throughout
         # The dual condition accounts for activation checkpoints
         inplace_safe = not (self.training or torch.is_grad_enabled())
@@ -175,7 +172,7 @@ class AlphaFold(nn.Module):
         seq_mask = feats["seq_mask"]
         pair_mask = seq_mask[..., None] * seq_mask[..., None, :]
         msa_mask = feats["msa_mask"]
-        
+
         ## Initialize the MSA and pair representations
 
         # m: [*, S_c, N, C_m]
@@ -187,18 +184,27 @@ class AlphaFold(nn.Module):
             inplace_safe=inplace_safe,
         )
         if prev_outputs is None:
-            m_1_prev = m.new_zeros((*batch_dims, n, self.config.input_embedder.c_m), requires_grad=False)
+            m_1_prev = m.new_zeros(
+                (*batch_dims, n, self.config.input_embedder.c_m), requires_grad=False
+            )
             # [*, N, N, C_z]
-            z_prev = z.new_zeros((*batch_dims, n, n, self.config.input_embedder.c_z), requires_grad=False)
+            z_prev = z.new_zeros(
+                (*batch_dims, n, n, self.config.input_embedder.c_z), requires_grad=False
+            )
             # [*, N, 3]
-            x_prev = z.new_zeros((*batch_dims, n, residue_constants.atom_type_num, 3), requires_grad=False)
+            x_prev = z.new_zeros(
+                (*batch_dims, n, residue_constants.atom_type_num, 3),
+                requires_grad=False,
+            )
 
         else:
-            m_1_prev, z_prev, x_prev = prev_outputs['m_1_prev'], prev_outputs['z_prev'], prev_outputs['x_prev']
+            m_1_prev, z_prev, x_prev = (
+                prev_outputs["m_1_prev"],
+                prev_outputs["z_prev"],
+                prev_outputs["x_prev"],
+            )
 
-        x_prev = pseudo_beta_fn(
-            feats["aatype"], x_prev, None
-        ).to(dtype=z.dtype)
+        x_prev = pseudo_beta_fn(feats["aatype"], x_prev, None).to(dtype=z.dtype)
 
         # m_1_prev_emb: [*, N, C_m]
         # z_prev_emb: [*, N, N, C_z]
@@ -215,42 +221,66 @@ class AlphaFold(nn.Module):
         # [*, N, N, C_z]
         z = add(z, z_prev_emb, inplace=inplace_safe)
 
-
         #######################
-        if 'noised_pseudo_beta_dists' in batch:
+        if "noised_pseudo_beta_dists" in batch:
             inp_z = self._get_input_pair_embeddings(
-                batch['noised_pseudo_beta_dists'], 
-                batch['pseudo_beta_mask'],
+                batch["noised_pseudo_beta_dists"],
+                batch["pseudo_beta_mask"],
             )
-            inp_z = inp_z + self.input_time_embedding(self.input_time_projection(batch['t']))[:,None,None]
-            
-        else: # otherwise DDP complains
-            B, L = batch['aatype'].shape
+            inp_z = (
+                inp_z
+                + self.input_time_embedding(self.input_time_projection(batch["t"]))[
+                    :, None, None
+                ]
+            )
+
+        else:  # otherwise DDP complains
+            B, L = batch["aatype"].shape
             inp_z = self._get_input_pair_embeddings(
-                z.new_zeros(B, L, L), 
+                z.new_zeros(B, L, L),
                 z.new_zeros(B, L),
             )
-            inp_z = inp_z + self.input_time_embedding(self.input_time_projection(z.new_zeros(B)))[:,None,None]
+            inp_z = (
+                inp_z
+                + self.input_time_embedding(self.input_time_projection(z.new_zeros(B)))[
+                    :, None, None
+                ]
+            )
 
         z = add(z, inp_z, inplace=inplace_safe)
 
         #############################
         if self.extra_input:
-            if 'extra_all_atom_positions' in batch:
-                extra_pseudo_beta = pseudo_beta_fn(batch['aatype'], batch['extra_all_atom_positions'], None)
-                extra_pseudo_beta_dists = torch.sum((extra_pseudo_beta.unsqueeze(-2) - extra_pseudo_beta.unsqueeze(-3)) ** 2, dim=-1)**0.5
-                extra_inp_z = self._get_extra_input_pair_embeddings(
-                    extra_pseudo_beta_dists, 
-                    batch['pseudo_beta_mask'],
+            if "extra_all_atom_positions" in batch:
+                extra_pseudo_beta = pseudo_beta_fn(
+                    batch["aatype"], batch["extra_all_atom_positions"], None
                 )
-                
-            else: # otherwise DDP complains
-                B, L = batch['aatype'].shape
+                extra_pseudo_beta_dists = (
+                    torch.sum(
+                        (
+                            extra_pseudo_beta.unsqueeze(-2)
+                            - extra_pseudo_beta.unsqueeze(-3)
+                        )
+                        ** 2,
+                        dim=-1,
+                    )
+                    ** 0.5
+                )
                 extra_inp_z = self._get_extra_input_pair_embeddings(
-                    z.new_zeros(B, L, L), 
-                    z.new_zeros(B, L),
-                ) * 0.0
-    
+                    extra_pseudo_beta_dists,
+                    batch["pseudo_beta_mask"],
+                )
+
+            else:  # otherwise DDP complains
+                B, L = batch["aatype"].shape
+                extra_inp_z = (
+                    self._get_extra_input_pair_embeddings(
+                        z.new_zeros(B, L, L),
+                        z.new_zeros(B, L),
+                    )
+                    * 0.0
+                )
+
             z = add(z, extra_inp_z, inplace=inplace_safe)
         ########################
 
@@ -259,12 +289,12 @@ class AlphaFold(nn.Module):
             # [*, S_e, N, C_e]
             a = self.extra_msa_embedder(build_extra_msa_feat(feats))
 
-            if(self.globals.offload_inference):
+            if self.globals.offload_inference:
                 # To allow the extra MSA stack (and later the evoformer) to
                 # offload its inputs, we remove all references to them here
                 input_tensors = [a, z]
                 del a, z
-    
+
                 # [*, N, N, C_z]
                 z = self.extra_msa_stack._forward_offload(
                     input_tensors,
@@ -274,13 +304,14 @@ class AlphaFold(nn.Module):
                     pair_mask=pair_mask.to(dtype=m.dtype),
                     _mask_trans=self.config._mask_trans,
                 )
-    
+
                 del input_tensors
             else:
                 # [*, N, N, C_z]
 
                 z = self.extra_msa_stack(
-                    a, z,
+                    a,
+                    z,
                     msa_mask=feats["extra_msa_mask"].to(dtype=m.dtype),
                     chunk_size=self.globals.chunk_size,
                     use_lma=self.globals.use_lma,
@@ -292,8 +323,8 @@ class AlphaFold(nn.Module):
         # Run MSA + pair embeddings through the trunk of the network
         # m: [*, S, N, C_m]
         # z: [*, N, N, C_z]
-        # s: [*, N, C_s]          
-        if(self.globals.offload_inference):
+        # s: [*, N, C_s]
+        if self.globals.offload_inference:
             input_tensors = [m, z]
             del m, z
             m, z, s = self.evoformer._forward_offload(
@@ -304,7 +335,7 @@ class AlphaFold(nn.Module):
                 use_lma=self.globals.use_lma,
                 _mask_trans=self.config._mask_trans,
             )
-    
+
             del input_tensors
         else:
             m, z, s = self.evoformer(
@@ -339,18 +370,16 @@ class AlphaFold(nn.Module):
         outputs["final_atom_mask"] = feats["atom37_atom_exists"]
         outputs["final_affine_tensor"] = outputs["sm"]["frames"][-1]
 
-        
         outputs.update(self.aux_heads(outputs))
 
-
         # [*, N, C_m]
-        outputs['m_1_prev'] = m[..., 0, :, :]
+        outputs["m_1_prev"] = m[..., 0, :, :]
 
         # [*, N, N, C_z]
-        outputs['z_prev'] = outputs["pair"]
+        outputs["z_prev"] = outputs["pair"]
 
         # [*, N, 3]
-        outputs['x_prev'] = outputs["final_atom_positions"]
+        outputs["x_prev"] = outputs["final_atom_positions"]
 
         return outputs
 
@@ -406,7 +435,7 @@ class AlphaFold(nn.Module):
     #                     Pseudo-beta mask
     #     """
     #     # Initialize recycling embeddings
-    
+
     #     m_1_prev, z_prev, x_prev = None, None, None
     #     prevs = [m_1_prev, z_prev, x_prev]
 
@@ -414,7 +443,7 @@ class AlphaFold(nn.Module):
 
     #     # Main recycling loop
     #     num_iters = batch["aatype"].shape[-1]
-    #     for cycle_no in range(num_iters): 
+    #     for cycle_no in range(num_iters):
     #         # Select the features for the current recycling cycle
     #         fetch_cur_batch = lambda t: t[..., cycle_no]
     #         feats = tensor_tree_map(fetch_cur_batch, batch)

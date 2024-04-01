@@ -7,6 +7,7 @@ import torch
 from openfold.np import residue_constants, protein
 from openfold.utils.feats import atom14_to_atom37
 
+
 def encode_sequence(
     seq: str,
     residue_index_offset: T.Optional[int] = 512,
@@ -55,7 +56,6 @@ def batch_encode_sequences(
     residue_index_offset: T.Optional[int] = 512,
     chain_linker: T.Optional[str] = "G" * 25,
 ) -> T.Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-
     aatype_list = []
     residx_list = []
     linker_mask_list = []
@@ -139,7 +139,6 @@ def collate_dense_tensors(
     return result
 
 
-
 class CategoricalMixture:
     def __init__(self, param, bins=50, start=0, end=1):
         # All tensors are of shape ..., bins.
@@ -176,7 +175,3 @@ class CategoricalMixture:
 def categorical_lddt(logits, bins=50):
     # Logits are ..., 37, bins.
     return CategoricalMixture(logits, bins=bins).mean()
-
-
-
-    

@@ -89,22 +89,24 @@ class InputPairStackBlock(nn.Module):
             self.pair_transition_n,
         )
 
-    def forward(self, 
-        z: torch.Tensor, 
-        mask: torch.Tensor, 
-        chunk_size: Optional[int] = None, 
+    def forward(
+        self,
+        z: torch.Tensor,
+        mask: torch.Tensor,
+        chunk_size: Optional[int] = None,
         use_lma: bool = False,
         inplace_safe: bool = False,
         _mask_trans: bool = True,
         _attn_chunk_size: Optional[int] = None,
     ):
-        if(_attn_chunk_size is None):
+        if _attn_chunk_size is None:
             _attn_chunk_size = chunk_size
 
-        single = z #  single_templates[i]
-        single_mask = mask # single_templates_masks[i]
-        
-        single = add(single,
+        single = z  #  single_templates[i]
+        single_mask = mask  # single_templates_masks[i]
+
+        single = add(
+            single,
             self.dropout_row(
                 self.tri_att_start(
                     single,
@@ -117,7 +119,8 @@ class InputPairStackBlock(nn.Module):
             inplace_safe,
         )
 
-        single = add(single,
+        single = add(
+            single,
             self.dropout_col(
                 self.tri_att_end(
                     single,
@@ -136,11 +139,11 @@ class InputPairStackBlock(nn.Module):
             inplace_safe=inplace_safe,
             _add_with_inplace=True,
         )
-        if(not inplace_safe):
+        if not inplace_safe:
             single = single + self.dropout_row(tmu_update)
         else:
             single = tmu_update
-        
+
         del tmu_update
 
         tmu_update = self.tri_mul_in(
@@ -149,14 +152,15 @@ class InputPairStackBlock(nn.Module):
             inplace_safe=inplace_safe,
             _add_with_inplace=True,
         )
-        if(not inplace_safe):
+        if not inplace_safe:
             single = single + self.dropout_row(tmu_update)
         else:
             single = tmu_update
-        
+
         del tmu_update
-  
-        single = add(single,
+
+        single = add(
+            single,
             self.pair_transition(
                 single,
                 mask=single_mask if _mask_trans else None,
@@ -172,6 +176,7 @@ class InputPairStack(nn.Module):
     """
     Implements Algorithm 16.
     """
+
     def __init__(
         self,
         c_t,
@@ -225,7 +230,7 @@ class InputPairStack(nn.Module):
 
         self.tune_chunk_size = tune_chunk_size
         self.chunk_size_tuner = None
-        if(tune_chunk_size):
+        if tune_chunk_size:
             self.chunk_size_tuner = ChunkSizeTuner()
 
     def forward(
@@ -246,7 +251,7 @@ class InputPairStack(nn.Module):
         Returns:
             [*, N_templ, N_res, N_res, C_t] template embedding update
         """
-        
+
         blocks = [
             partial(
                 b,
@@ -259,21 +264,23 @@ class InputPairStack(nn.Module):
             for b in self.blocks
         ]
 
-        if(chunk_size is not None and self.chunk_size_tuner is not None):
-            assert(not self.training)
+        if chunk_size is not None and self.chunk_size_tuner is not None:
+            assert not self.training
             tuned_chunk_size = self.chunk_size_tuner.tune_chunk_size(
                 representative_fn=blocks[0],
                 args=(t.clone(),),
                 min_chunk_size=chunk_size,
             )
             blocks = [
-                partial(b, 
+                partial(
+                    b,
                     chunk_size=tuned_chunk_size,
                     _attn_chunk_size=max(chunk_size, tuned_chunk_size // 4),
-                ) for b in blocks
+                )
+                for b in blocks
             ]
 
-        t, = checkpoint_blocks(
+        (t,) = checkpoint_blocks(
             blocks=blocks,
             args=(t,),
             blocks_per_ckpt=self.blocks_per_ckpt if self.training else None,

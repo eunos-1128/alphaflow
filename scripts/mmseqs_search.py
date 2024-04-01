@@ -1,4 +1,4 @@
-#https://github.com/sokrypton/ColabFold/blob/main/colabfold/mmseqs/search.py
+# https://github.com/sokrypton/ColabFold/blob/main/colabfold/mmseqs/search.py
 """
 Functionality for running mmseqs locally. Takes in a fasta file, outputs final.a3m
 
@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import List, Union
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,6 +64,7 @@ def mmseqs_search_monomer(
     for db in used_dbs:
         if not dbbase.joinpath(f"{db}.dbtype").is_file():
             import pdb
+
             pdb.set_trace()
             raise FileNotFoundError(f"Database {db} does not exist")
         if (
@@ -586,6 +588,8 @@ def get_queries(
                     is_complex = True
                     break
     return queries, is_complex
+
+
 def msa_to_str(
     unpaired_msa: List[str],
     paired_msa: List[str],
@@ -598,6 +602,8 @@ def msa_to_str(
     query_seqs_cardinality = [1 for _ in query_seqs_cardinality]
     msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
     return msa
+
+
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
     """Parses FASTA string and returns list of strings with amino-acid sequences.
 
@@ -627,7 +633,6 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
         sequences[index] += line
 
     return sequences, descriptions
-
 
 
 if __name__ == "__main__":
