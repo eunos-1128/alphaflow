@@ -1,5 +1,6 @@
+import os
+import subprocess
 from argparse import ArgumentParser
-import subprocess, os
 
 
 def parse_train_args():

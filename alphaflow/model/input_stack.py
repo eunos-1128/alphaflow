@@ -17,20 +17,16 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-
-from openfold.model.primitives import LayerNorm
-from openfold.model.dropout import (
-    DropoutRowwise,
-    DropoutColumnwise,
-)
+from openfold.model.dropout import DropoutColumnwise, DropoutRowwise
 from openfold.model.pair_transition import PairTransition
+from openfold.model.primitives import LayerNorm
 from openfold.model.triangular_attention import (
-    TriangleAttentionStartingNode,
     TriangleAttentionEndingNode,
+    TriangleAttentionStartingNode,
 )
 from openfold.model.triangular_multiplicative_update import (
-    TriangleMultiplicationOutgoing,
     TriangleMultiplicationIncoming,
+    TriangleMultiplicationOutgoing,
 )
 from openfold.utils.checkpointing import checkpoint_blocks
 from openfold.utils.chunk_utils import ChunkSizeTuner

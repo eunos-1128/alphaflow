@@ -5,30 +5,27 @@
 import typing as T
 from functools import partial
 
+import esm
 import torch
+from esm import Alphabet
+from openfold.data.data_transforms import make_atom14_masks
+from openfold.model.heads import PerResidueLDDTCaPredictor
+from openfold.model.primitives import Linear
+from openfold.np import residue_constants
+from openfold.utils.feats import atom14_to_atom37, pseudo_beta_fn
 from torch import nn
 from torch.nn import LayerNorm
 
-import esm
-from esm import Alphabet
-
 from alphaflow.utils.misc import (
-    categorical_lddt,
     batch_encode_sequences,
+    categorical_lddt,
     collate_dense_tensors,
     output_to_pdb,
 )
 
-from .trunk import FoldingTrunk
-from .layers import GaussianFourierProjection
 from .input_stack import InputPairStack
-
-from openfold.data.data_transforms import make_atom14_masks
-from openfold.np import residue_constants
-from openfold.model.heads import PerResidueLDDTCaPredictor
-from openfold.model.primitives import Linear
-from openfold.utils.feats import atom14_to_atom37, pseudo_beta_fn
-
+from .layers import GaussianFourierProjection
+from .trunk import FoldingTrunk
 
 load_fn = esm.pretrained.load_model_and_alphabet
 esm_registry = {

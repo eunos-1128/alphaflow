@@ -13,13 +13,7 @@ from openfold.model.triangular_multiplicative_update import (
 )
 from torch import nn
 
-from .layers import (
-    Attention,
-    Dropout,
-    PairToSequence,
-    ResidueMLP,
-    SequenceToPair,
-)
+from .layers import Attention, Dropout, PairToSequence, ResidueMLP, SequenceToPair
 
 
 class TriangularSelfAttentionBlock(nn.Module):

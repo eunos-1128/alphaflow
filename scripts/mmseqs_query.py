@@ -7,14 +7,15 @@ parser.add_argument("--split", type=str, required=True)
 parser.add_argument("--outdir", type=str, default="./alignment_dir")
 args = parser.parse_args()
 
-from typing import Tuple, List
-import os
-import requests
-import random
-import time
 import logging
+import os
+import random
 import tarfile
+import time
+from typing import List, Tuple
+
 import pandas as pd
+import requests
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)

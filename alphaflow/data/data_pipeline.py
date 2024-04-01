@@ -15,15 +15,13 @@
 
 import os
 from multiprocessing import cpu_count
-from typing import Mapping, Optional, Sequence, Any
+from typing import Any, Mapping, Optional, Sequence
 
 import numpy as np
-
-from openfold.data import templates, parsers, mmcif_parsing
+from openfold.data import mmcif_parsing, parsers, templates
 from openfold.data.templates import get_custom_template_features
-from openfold.data.tools import jackhmmer, hhblits, hhsearch
-from openfold.np import residue_constants, protein
-
+from openfold.data.tools import hhblits, hhsearch, jackhmmer
+from openfold.np import protein, residue_constants
 
 FeatureDict = Mapping[str, np.ndarray]
 

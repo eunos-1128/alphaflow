@@ -14,14 +14,13 @@
 # limitations under the License.
 
 import copy
-from typing import Mapping, Tuple, List, Dict, Sequence
+from typing import Dict, List, Mapping, Sequence, Tuple
 
 import ml_collections
 import numpy as np
 import torch
 
 from . import input_pipeline
-
 
 FeatureDict = Mapping[str, np.ndarray]
 TensorDict = Dict[str, torch.Tensor]

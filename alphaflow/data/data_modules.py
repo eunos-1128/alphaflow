@@ -14,24 +14,27 @@
 # limitations under the License.
 
 import copy
+import json
 from functools import partial
-import json, tqdm
+
+import tqdm
+
 from alphaflow.utils.logging import get_logger
 
 logger = get_logger(__name__)
 import pickle
 import time
-from typing import Optional, Sequence, List, Any
-import pandas as pd
+from typing import Any, List, Optional, Sequence
 
 import ml_collections as mlc
 import numpy as np
+import pandas as pd
 import pytorch_lightning as pl
 import torch
-
 from openfold.data import mmcif_parsing
+
 from alphaflow.data import data_pipeline, feature_pipeline
-from alphaflow.utils.tensor_utils import tensor_tree_map, dict_multimap
+from alphaflow.utils.tensor_utils import dict_multimap, tensor_tree_map
 
 
 class OpenFoldSingleDataset(torch.utils.data.Dataset):

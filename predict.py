@@ -1,4 +1,26 @@
 import argparse
+import json
+import os
+import time
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+import pytorch_lightning as pl
+import torch
+import tqdm
+import wandb
+from openfold.utils.import_weights import import_jax_weights_
+
+import alphaflow.utils.protein as protein
+from alphaflow.config import model_config
+from alphaflow.data.data_modules import collate_fn
+from alphaflow.data.inference import AlphaFoldCSVDataset, CSVDataset
+from alphaflow.model.wrapper import AlphaFoldWrapper, ESMFoldWrapper
+from alphaflow.utils.logging import get_logger
+from alphaflow.utils.tensor_utils import tensor_tree_map
+
+logger = get_logger(__name__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_csv", type=str, default="splits/transporters_only.csv")
@@ -23,23 +45,6 @@ parser.add_argument("--runtime_json", type=str, default=None)
 parser.add_argument("--no_overwrite", action="store_true", default=False)
 args = parser.parse_args()
 
-import torch, tqdm, os, wandb, json, time
-import pandas as pd
-import pytorch_lightning as pl
-import numpy as np
-from collections import defaultdict
-from alphaflow.data.data_modules import collate_fn
-from alphaflow.model.wrapper import AlphaFoldWrapper, ESMFoldWrapper
-from alphaflow.utils.tensor_utils import tensor_tree_map
-import alphaflow.utils.protein as protein
-from alphaflow.data.inference import AlphaFoldCSVDataset, CSVDataset
-from collections import defaultdict
-from openfold.utils.import_weights import import_jax_weights_
-from alphaflow.config import model_config
-
-from alphaflow.utils.logging import get_logger
-
-logger = get_logger(__name__)
 torch.set_float32_matmul_precision("high")
 
 config = model_config(

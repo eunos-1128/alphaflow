@@ -4,10 +4,12 @@
 # LICENSE file in the root directory of this source tree.
 import typing as T
 from functools import partial
-from openfold.utils.checkpointing import checkpoint_blocks
+
 import torch
 import torch.nn as nn
 from openfold.model.structure_module import StructureModule
+from openfold.utils.checkpointing import checkpoint_blocks
+
 from .tri_self_attn_block import TriangularSelfAttentionBlock
 
 

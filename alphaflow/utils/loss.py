@@ -14,19 +14,19 @@
 # limitations under the License.
 
 import logging
+from typing import Dict, Optional, Tuple
+
 import ml_collections
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import Dict, Optional, Tuple
-
 from openfold.np import residue_constants
-from openfold.utils.rigid_utils import Rotation, Rigid
+from openfold.utils.rigid_utils import Rigid, Rotation
 from openfold.utils.tensor_utils import (
-    tree_map,
-    tensor_tree_map,
     masked_mean,
     permute_final_dims,
+    tensor_tree_map,
+    tree_map,
 )
 
 

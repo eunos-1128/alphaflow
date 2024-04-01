@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 
 # https://github.com/scipy/scipy/blob/main/scipy/spatial/transform/_rotation.pyx

@@ -6,8 +6,10 @@ parser.add_argument("--db_dir", type=str, default="./dbbase")
 parser.add_argument("--outdir", type=str, default="./alignment_dir")
 args = parser.parse_args()
 
+import os
+import subprocess
+
 import pandas as pd
-import subprocess, os
 
 df = pd.read_csv(args.split)
 os.makedirs(args.outdir, exist_ok=True)

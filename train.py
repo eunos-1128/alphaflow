@@ -5,24 +5,28 @@ args = parse_train_args()
 from alphaflow.utils.logging import get_logger
 
 logger = get_logger(__name__)
-import torch, tqdm, os, wandb
-import pandas as pd
-
+import os
 from functools import partial
+
+import pandas as pd
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+import torch
+import tqdm
+import wandb
 from openfold.utils.exponential_moving_average import ExponentialMovingAverage
-from alphaflow.model.wrapper import ESMFoldWrapper, AlphaFoldWrapper
 from openfold.utils.import_weights import import_jax_weights_
+from pytorch_lightning.callbacks import ModelCheckpoint
+
+from alphaflow.model.wrapper import AlphaFoldWrapper, ESMFoldWrapper
 
 torch.set_float32_matmul_precision("high")
 from alphaflow.config import model_config
 from alphaflow.data.data_modules import (
-    OpenFoldSingleDataset,
     OpenFoldBatchCollator,
     OpenFoldDataset,
+    OpenFoldSingleDataset,
 )
-from alphaflow.data.inference import CSVDataset, AlphaFoldCSVDataset
+from alphaflow.data.inference import AlphaFoldCSVDataset, CSVDataset
 
 config = model_config("initial_training", train=True, low_prec=True)
 

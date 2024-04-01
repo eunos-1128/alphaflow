@@ -7,10 +7,12 @@ parser.add_argument("--outdir", type=str, default="./templates_dir")
 args = parser.parse_args()
 
 import os
-from alphaflow.utils import protein
-from openfold.data.data_pipeline import make_protein_features
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from openfold.data.data_pipeline import make_protein_features
+
+from alphaflow.utils import protein
 
 os.makedirs(args.outdir, exist_ok=True)
 

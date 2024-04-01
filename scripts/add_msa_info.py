@@ -1,6 +1,8 @@
-import pandas as pd
-import os, tqdm
+import os
 from collections import defaultdict
+
+import pandas as pd
+import tqdm
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--openfold_dir", type=str, required=True)

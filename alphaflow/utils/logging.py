@@ -1,4 +1,6 @@
-import logging, socket, os
+import logging
+import os
+import socket
 
 model_dir = os.environ.get("MODEL_DIR", "./workdir/default")
 

@@ -13,28 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import openfold.np.residue_constants as residue_constants
 import torch
 import torch.nn as nn
-
-from openfold.model.embedders import (
-    InputEmbedder,
-    RecyclingEmbedder,
-    ExtraMSAEmbedder,
-)
+from openfold.model.embedders import ExtraMSAEmbedder, InputEmbedder, RecyclingEmbedder
 from openfold.model.evoformer import EvoformerStack, ExtraMSAStack
 from openfold.model.heads import AuxiliaryHeads
+from openfold.model.primitives import Linear
 from openfold.model.structure_module import StructureModule
-
-import openfold.np.residue_constants as residue_constants
-from openfold.utils.feats import (
-    pseudo_beta_fn,
-    build_extra_msa_feat,
-    atom14_to_atom37,
-)
+from openfold.utils.feats import atom14_to_atom37, build_extra_msa_feat, pseudo_beta_fn
 from openfold.utils.tensor_utils import add
+
 from .input_stack import InputPairStack
 from .layers import GaussianFourierProjection
-from openfold.model.primitives import Linear
 
 
 class AlphaFold(nn.Module):

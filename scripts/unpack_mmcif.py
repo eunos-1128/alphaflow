@@ -7,12 +7,18 @@ parser.add_argument("--outcsv", type=str, default="./pdb_mmcif.csv")
 parser.add_argument("--num_workers", type=int, default=15)
 args = parser.parse_args()
 
-import warnings, tqdm, os, io, logging
-import pandas as pd
-import numpy as np
+import io
+import logging
+import os
+import warnings
 from multiprocessing import Pool
-from alphaflow.data.data_pipeline import DataPipeline
+
+import numpy as np
+import pandas as pd
+import tqdm
 from openfold.data import mmcif_parsing
+
+from alphaflow.data.data_pipeline import DataPipeline
 
 pipeline = DataPipeline(template_featurizer=None)
 

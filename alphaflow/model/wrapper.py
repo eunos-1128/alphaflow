@@ -1,35 +1,31 @@
 from alphaflow.utils.logging import get_logger
 
 logger = get_logger(__name__)
-import torch, os, wandb, time
-import pandas as pd
-
-from .esmfold import ESMFold
-from .alphafold import AlphaFold
-
-from alphaflow.utils.loss import AlphaFoldLoss
-from alphaflow.utils.diffusion import HarmonicPrior, rmsdalign
-from alphaflow.utils import protein
-
-from openfold.utils.loss import lddt_ca
-from openfold.utils.superimposition import superimpose
-from openfold.utils.feats import pseudo_beta_fn
-from openfold.data import data_transforms
-from openfold.utils.exponential_moving_average import ExponentialMovingAverage
-
-import pytorch_lightning as pl
-import numpy as np
-from openfold.np import residue_constants
-from openfold.utils.validation_metrics import (
-    drmsd,
-    gdt_ts,
-    gdt_ha,
-)
-from openfold.utils.tensor_utils import (
-    tensor_tree_map,
-)
+import os
+import time
 from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+import pytorch_lightning as pl
+import torch
+import wandb
+from openfold.data import data_transforms
+from openfold.np import residue_constants
+from openfold.utils.exponential_moving_average import ExponentialMovingAverage
+from openfold.utils.feats import pseudo_beta_fn
+from openfold.utils.loss import lddt_ca
 from openfold.utils.lr_schedulers import AlphaFoldLRScheduler
+from openfold.utils.superimposition import superimpose
+from openfold.utils.tensor_utils import tensor_tree_map
+from openfold.utils.validation_metrics import drmsd, gdt_ha, gdt_ts
+
+from alphaflow.utils import protein
+from alphaflow.utils.diffusion import HarmonicPrior, rmsdalign
+from alphaflow.utils.loss import AlphaFoldLoss
+
+from .alphafold import AlphaFold
+from .esmfold import ESMFold
 
 
 def gather_log(log, world_size):

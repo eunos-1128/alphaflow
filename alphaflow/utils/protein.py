@@ -1,12 +1,17 @@
-from typing import Sequence, Optional
-from openfold.np.protein import to_pdb
-from openfold.np.protein import from_pdb_string as _from_pdb_string
-from openfold.data import mmcif_parsing
-from openfold.np import residue_constants
-from alphaflow.utils.tensor_utils import tensor_tree_map
-import subprocess, tempfile, os, dataclasses
+import dataclasses
+import os
+import subprocess
+import tempfile
+from typing import Optional, Sequence
+
 import numpy as np
 from Bio import pairwise2
+from openfold.data import mmcif_parsing
+from openfold.np import residue_constants
+from openfold.np.protein import from_pdb_string as _from_pdb_string
+from openfold.np.protein import to_pdb
+
+from alphaflow.utils.tensor_utils import tensor_tree_map
 
 
 @dataclasses.dataclass(repr=False)

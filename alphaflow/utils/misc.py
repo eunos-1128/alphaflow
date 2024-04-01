@@ -3,8 +3,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import typing as T
+
 import torch
-from openfold.np import residue_constants, protein
+from openfold.np import protein, residue_constants
 from openfold.utils.feats import atom14_to_atom37
 
 

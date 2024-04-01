@@ -7,15 +7,20 @@ parser.add_argument("--thresh", type=float, default=0.4)
 parser.add_argument("--mmseqs_path", type=str, default="mmseqs")
 args = parser.parse_args()
 
-import pandas as pd
-import os, json, tqdm, random, subprocess, pickle
+import json
+import os
+import pickle
+import random
+import subprocess
 from collections import defaultdict
 from functools import partial
+
 import numpy as np
+import pandas as pd
+import tqdm
+from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio import SeqIO
-from collections import defaultdict
 
 
 def main():

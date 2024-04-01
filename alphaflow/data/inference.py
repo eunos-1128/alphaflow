@@ -1,11 +1,13 @@
-import torch
-import pandas as pd
 import numpy as np
+import pandas as pd
+import torch
+from openfold.data.data_transforms import make_atom14_masks
 from openfold.np import residue_constants
+
+import alphaflow.utils.protein as protein
+
 from .data_pipeline import DataPipeline
 from .feature_pipeline import FeaturePipeline
-from openfold.data.data_transforms import make_atom14_masks
-import alphaflow.utils.protein as protein
 
 
 def seq_to_tensor(seq):

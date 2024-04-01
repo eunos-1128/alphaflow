@@ -11,8 +11,7 @@ import shutil
 import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import List, Union
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
