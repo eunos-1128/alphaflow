@@ -42,9 +42,10 @@ torch.set_float32_matmul_precision("high")
 
 config = model_config(
     'initial_training',
-    train=True, 
+    train=True,
     low_prec=True
-) 
+    long_sequence_inference=True
+)
 schedule = np.linspace(args.tmax, 0, args.steps+1)
 if args.tmax != 1.0:
     schedule = np.array([1.0] + list(schedule))
@@ -79,8 +80,8 @@ def main():
         model = model_class(**ckpt['hyper_parameters'], training=False)
         model.model.load_state_dict(ckpt['params'], strict=False)
         model = model.cuda()
-        
-    
+
+
     elif args.original_weights:
         model = model_class(config, None, training=False)
         if args.mode == 'esmfold':
@@ -89,19 +90,19 @@ def main():
             model_state = model_data["model"]
             model.model.load_state_dict(model_state, strict=False)
             model = model.to(torch.float).cuda()
-            
+
         elif args.mode == 'alphafold':
             import_jax_weights_(model.model, 'params_model_1.npz', version='model_3')
             model = model.cuda()
-        
+
     else:
         model = model_class.load_from_checkpoint(args.ckpt, map_location='cpu')
         model.load_ema_weights()
         model = model.cuda()
     model.eval()
-    
+
     logger.info("Model has been loaded")
-    
+
     results = defaultdict(list)
     os.makedirs(args.outpdb, exist_ok=True)
     runtime = defaultdict(list)
@@ -114,15 +115,15 @@ def main():
         for j in tqdm.trange(args.samples):
             if args.subsample or args.resample:
                 item = valset[i] # resample MSA
-            
+
             batch = collate_fn([item])
-            batch = tensor_tree_map(lambda x: x.cuda(), batch)  
+            batch = tensor_tree_map(lambda x: x.cuda(), batch)
             start = time.time()
             prots = model.inference(batch, as_protein=True, noisy_first=args.noisy_first,
                         no_diffusion=args.no_diffusion, schedule=schedule, self_cond=args.self_cond)
             runtime[item['name']].append(time.time() - start)
             result.append(prots[-1])
-            
+
 
 
         with open(f'{args.outpdb}/{item["name"]}.pdb', 'w') as f:
