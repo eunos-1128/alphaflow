@@ -43,13 +43,24 @@ parser.add_argument("--self_cond", action="store_true", default=False)
 parser.add_argument("--noisy_first", action="store_true", default=False)
 parser.add_argument("--runtime_json", type=str, default=None)
 parser.add_argument("--no_overwrite", action="store_true", default=False)
+parser.add_argument("--long_sequence_inference", action="store_true", default=False)
+
 args = parser.parse_args()
 
 torch.set_float32_matmul_precision("high")
 
-config = model_config(
-    "initial_training", train=True, low_prec=True, long_sequence_inference=True
-)
+if os.environ["NVIDIA_VISIBLE_DEVICES"] == "all":
+    gpu_device_ids = [i for i in range(torch.cuda.device_count())]
+else:
+    gpu_device_ids = [int(gpu_device) for gpu_device in args.gpu_devices.split(",")]
+
+if args.long_sequence_inference:
+    config = model_config(
+        "initial_training", train=False, low_prec=False, long_sequence_inference=True
+    )
+else:
+    config = model_config("initial_training", train=True, low_prec=True)
+
 schedule = np.linspace(args.tmax, 0, args.steps + 1)
 if args.tmax != 1.0:
     schedule = np.array([1.0] + list(schedule))
@@ -65,6 +76,9 @@ if args.subsample:  # https://elifesciences.org/articles/75751#s3
 
 @torch.no_grad()
 def main():
+    logger.debug(f'{os.environ["NVIDIA_VISIBLE_DEVICES"]=}')
+    logger.debug(f"{gpu_device_ids=}")
+
     valset = {
         "alphafold": AlphaFoldCSVDataset,
         "esmfold": CSVDataset,
@@ -84,6 +98,8 @@ def main():
         model = model_class(**ckpt["hyper_parameters"], training=False)
         model.model.load_state_dict(ckpt["params"], strict=False)
         model = model.cuda()
+        # model = torch.nn.DataParallel(model, device_ids=gpu_device_ids)
+        # torch.backends.cudnn.benchmark = True
 
     elif args.original_weights:
         model = model_class(config, None, training=False)
@@ -93,15 +109,23 @@ def main():
             model_state = model_data["model"]
             model.model.load_state_dict(model_state, strict=False)
             model = model.to(torch.float).cuda()
+            # model = torch.nn.DataParallel(model, device_ids=gpu_device_ids)
+            # torch.backends.cudnn.benchmark = True
 
         elif args.mode == "alphafold":
             import_jax_weights_(model.model, "params_model_1.npz", version="model_3")
             model = model.cuda()
+            # model = torch.nn.DataParallel(model, device_ids=gpu_device_ids)
+            # torch.backends.cudnn.benchmark = True
 
     else:
         model = model_class.load_from_checkpoint(args.ckpt, map_location="cpu")
         model.load_ema_weights()
         model = model.cuda()
+        # model = torch.nn.DataParallel(model, device_ids=gpu_device_ids)
+        # torch.backends.cudnn.benchmark = True
+
+    # model.module.eval()
     model.eval()
 
     logger.info("Model has been loaded")
@@ -122,6 +146,14 @@ def main():
             batch = collate_fn([item])
             batch = tensor_tree_map(lambda x: x.cuda(), batch)
             start = time.time()
+            # prots = model.module.inference(
+            #     batch,
+            #     as_protein=True,
+            #     noisy_first=args.noisy_first,
+            #     no_diffusion=args.no_diffusion,
+            #     schedule=schedule,
+            #     self_cond=args.self_cond,
+            # )
             prots = model.inference(
                 batch,
                 as_protein=True,
